@@ -1,0 +1,45 @@
+---
+# tasks file for ansible-k3d
+- name: Create k3d directory
+  ansible.builtin.file:
+    path: /opt/k3d
+    state: directory
+    mode: '0755'
+
+- name: Get latest Release from k3d
+  ansible.builtin.shell: curl -Lo /opt/k3d/k3d https://github.com/rancher/k3d/releases/download/$(curl -s https://api.github.com/repos/rancher/k3d/releases/latest | grep tag_name | cut -d '"' -f 4)/k3d-linux-amd64
+  args:
+    warn: no
+
+- name: Change file ownership, group and permissions
+  ansible.builtin.file:
+    path: /opt/k3d/k3d
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Verify k3d exists
+  stat: path=/opt/k3d/k3d
+  register: k3d_stat
+
+- name: Configure k3d on system bin.
+  file:
+    src: "/opt/k3d/k3d"
+    dest: "/usr/bin/k3d"
+    state: link
+  when: k3d_stat.stat.exists
+
+- name: Configure k3d on system sbin.
+  file:
+    src: "/opt/k3d/k3d" 
+    dest: "/usr/sbin/k3d"
+    state: link
+  when: k3d_stat.stat.exists
+
+- command: k3d version
+  register: result_k3d
+  failed_when: false
+  changed_when: false
+
+- debug:
+    var: result_k3d.stdout
